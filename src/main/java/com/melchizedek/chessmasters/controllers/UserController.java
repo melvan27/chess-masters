@@ -1,6 +1,8 @@
 package com.melchizedek.chessmasters.controllers;
 
+import java.io.IOException;
 import java.security.Principal;
+import java.util.Base64;
 import java.util.Date;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,8 +11,10 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.melchizedek.chessmasters.models.User;
 import com.melchizedek.chessmasters.services.UserService;
@@ -96,6 +100,9 @@ public class UserController {
 		String email = principal.getName();
 		User user = userService.findByEmail(email);
 		model.addAttribute("user", user);
+		byte[] profilePicture = user.getProfilePicture();
+		String base64ProfilePicture = Base64.getEncoder().encodeToString(profilePicture);
+		model.addAttribute("base64ProfilePicture", base64ProfilePicture);
 		
 		if(user!=null) {
 			user.setLastLogin(new Date());
@@ -122,6 +129,48 @@ public class UserController {
 		
 		model.addAttribute("users", userService.allUsers());
 		
+		return "redirect:/home";
+	}
+
+	@RequestMapping("/profile")
+	public String editProfile(Principal principal, Model model) {
+		if(principal==null) {
+			return "redirect:/login";
+		}
+		User user = userService.findByEmail(principal.getName());
+		String username = user.getUsername();
+		model.addAttribute("user", user);
+		model.addAttribute("username", username);
+		byte[] profilePicture = user.getProfilePicture();
+		String base64ProfilePicture = Base64.getEncoder().encodeToString(profilePicture);
+		model.addAttribute("base64ProfilePicture", base64ProfilePicture);
+		return "profilePage.jsp";
+	}
+
+	@PutMapping("/profile")
+	public String saveProfile(@Valid @ModelAttribute User user, BindingResult result, Model model, Principal principal, HttpSession session) throws IOException {
+		if(principal==null) {
+			return "redirect:/login";
+		}
+		if(result.hasErrors()) {
+			String username = userService.findByEmail(principal.getName()).getUsername();
+			model.addAttribute("username", username);
+			byte[] picture = userService.findByEmail(principal.getName()).getProfilePicture();
+			String base64ProfilePicture = Base64.getEncoder().encodeToString(picture);
+			model.addAttribute("base64ProfilePicture", base64ProfilePicture);
+			return "profilePage.jsp";
+		}
+		User currentUser = userService.findByEmail(principal.getName());
+		currentUser.setFirstName(user.getFirstName());
+		currentUser.setLastName(user.getLastName());
+		currentUser.setUsername(user.getUsername());
+		currentUser.setEmail(user.getEmail());
+		
+		MultipartFile profilePictureFile = user.getPictureFile();
+		if (profilePictureFile != null) {
+			currentUser.setProfilePicture(profilePictureFile.getBytes());
+		}
+		userService.updateUser(currentUser);
 		return "redirect:/home";
 	}
 

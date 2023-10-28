@@ -37,6 +37,7 @@ public class WebSecurityConfig {
 							new MvcRequestMatcher(introspector, "/admin/**")
 							).hasAnyRole("SUPER_ADMIN", "ADMIN")
 					.requestMatchers(new MvcRequestMatcher(introspector, "/home")).authenticated()
+					.requestMatchers(new MvcRequestMatcher(introspector, "/play")).authenticated()
 					.anyRequest().permitAll()
 					)
 			.formLogin(

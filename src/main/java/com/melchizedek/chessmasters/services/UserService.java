@@ -1,5 +1,8 @@
 package com.melchizedek.chessmasters.services;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,10 +24,16 @@ public class UserService {
     private BCryptPasswordEncoder bCryptPasswordEncoder;
 
     public void newUser(User user, String role) {
-		user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
-		user.setRoles(roleRepository.findByName(role));
-		userRepository.save(user);
-	}
+		try {
+            user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
+            user.setRoles(roleRepository.findByName(role));
+            byte[] defaultPicture = Files.readAllBytes(Paths.get("src/main/resources/static/default.png"));
+            user.setProfilePicture(defaultPicture);
+            userRepository.save(user);
+        } catch (IOException e) {
+        e.printStackTrace();
+        }
+    }
 	
 	public void updateUser(User user) {
 		userRepository.save(user);
