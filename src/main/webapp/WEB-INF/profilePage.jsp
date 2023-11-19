@@ -165,6 +165,9 @@ uri="http://www.springframework.org/tags/form" %>
             <a href="/friends" class="nav-link link-body-emphasis">
               <svg class="bi pe-none me-2" width="16" height="16"><use xlink:href="#people-fill"></use></svg>
               Friends
+              <c:if test="${requestCount > 0}">
+              <span class="badge bg-danger">${requestCount}</span>
+            </c:if>
             </a>
           </li>
         </ul>

@@ -2,12 +2,14 @@
     pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="form" uri="http://www.springframework.org/tags/form"%>
+<%@ page isErrorPage="true"%>
     
 <!DOCTYPE html>
 <html>
 <head>
 <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.min.css" />
-<title>Dashboard</title>
+<title>Friends</title>
 <style>
   .bd-placeholder-img {
     font-size: 1.125rem;
@@ -139,7 +141,7 @@
       <hr>
       <ul class="nav nav-pills flex-column mb-auto">
         <li class="nav-item">
-          <a href="/home" class="nav-link active" aria-current="page">
+          <a href="/home" class="nav-link link-body-emphasis">
             <svg class="bi pe-none me-2" width="16" height="16"><use xlink:href="#home"></use></svg>
             Home
           </a>
@@ -157,7 +159,7 @@
           </a>
         </li>
         <li>
-          <a href="/friends" class="nav-link link-body-emphasis">
+          <a href="/friends" class="nav-link active" aria-current="page">
             <svg class="bi pe-none me-2" width="16" height="16"><use xlink:href="#people-fill"></use></svg>
             Friends
             <c:if test="${requestCount > 0}">
@@ -187,7 +189,105 @@
     </div>
   
     <div class="b-divider b-vr"></div>
+    <div class="container mt-4 ms-4">
+      <div class="mb-3">
+        <h1>Friends</h1>
+        <c:choose>
+          <c:when test="${not empty friends}">
+            <ul class="list-group">
+              <c:forEach items="${friends}" var="friend">
+                <li class="list-group-item border-0 d-flex align-items-center">
+                  <p class="mb-0">${friend.username}</p>
+                  <form:form action="/friends/remove/${friend.id}" method="post">
+                    <input type="hidden" name="_method" value="put">
+                    <input class="btn btn-danger ms-5" type="submit" value="Remove friend">
+                  </form:form>
+                </li>
+              </c:forEach>
+            </ul>
+          </c:when>
+          <c:when test="${empty friends}">
+            <p>No friends yet.</p>
+          </c:when>
+        </c:choose>
+      </div>
+      <div class="mb-3">
+        <h1>Search Users</h1>
+        <form method="GET" action="/friends/search">
+          <div class="input-group">
+            <input class="form-control" type="text" placeholder="Search for users" name="search" id="searchInput">
+            <button class="btn btn-outline-primary ms-2" type="submit">Search</button>
+          </div>
+        </form>
+        <c:if test="${noResults}">
+          <p>No results found.</p>
+        </c:if>
+        <c:if test="${not empty searchError}">
+          <p class="text-danger">${searchError}</p>
+        </c:if>
+        <ul class="list-group">
+          <c:forEach items="${searchResults}" var="potentialFriend">
+            <li class="list-group-item border-0">
+              ${potentialFriend.username}
+              <form:form action="/friends/request/${potentialFriend.id}" method="post" modelAttribute="friendRequest">
+                <form:hidden path="sender" value="${user.id}"/>
+                <form:hidden path="recipient" value="${potentialFriend.id}"/>
+                <input class="btn btn-success" id="send-friend-request-button" type="submit" value="Send friend request"/>
+              </form:form>
+            </li>
+          </c:forEach>
+        </ul>
+      </div>
+      <div>
+        <h1>Pending Friend Requests</h1>
+        <c:choose>
+          <c:when test="${not empty friendRequests}">
+            <ul class="list-group">
+              <c:forEach items="${friendRequests}" var="request">
+                <li class="list-group-item border-0 d-flex align-items-center">
+                  <p class="mb-0">${request.sender.username} sent you a friend request.</p>
+                  <div class="d-inline-flex gap-2 ms-5">
+                    <form:form action="/friends/accept/${request.id}/${request.sender.id}" method="post">
+                      <input type="hidden" name="_method" value="put">
+                      <input class="btn btn-success" type="submit" value="Accept">
+                    </form:form>
+                    <form:form action="/friends/decline/${request.id}" method="post">
+                      <input type="hidden" name="_method" value="put">
+                      <input class="btn btn-danger" type="submit" value="Decline">
+                    </form:form>
+                  </div>
+                </li>
+              </c:forEach>
+            </ul>
+          </c:when>
+          <c:when test="${empty friendRequests}">
+            <p>No pending friend requests.</p>
+          </c:when>
+        </c:choose>
+      </div>
+    </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+  <script>
+    const socket = new WebSocket("ws://localhost:8080/ws");
+
+    socket.onopen = function() {
+      console.log('WebSocket connection established');
+      socket.send('subscribe:/topic/notifications');
+    };
+
+    socket.onmessage = function(event) {
+      const notification = JSON.parse(event.data);
+      console.log('Received notification:', notification);
+      // Display the notification to the user
+    };
+
+    <!-- const sendButton = document.getElementById("send-friend-request-button");
+
+    sendButton.addEventListener("click", () => {
+      sendButton.value = "Friend request sent";
+      sendButton.disabled = true;
+    }); -->
+  </script>
 </body>
 </html>

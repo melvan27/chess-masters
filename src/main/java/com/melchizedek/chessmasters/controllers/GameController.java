@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.security.Principal;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.melchizedek.chessmasters.models.FriendRequest;
 import com.melchizedek.chessmasters.models.User;
 import com.melchizedek.chessmasters.services.UserService;
 import com.melchizedek.chessmasters.stockfish.StockfishWrapper;
@@ -36,6 +38,9 @@ public class GameController {
 		byte[] profilePicture = user.getProfilePicture();
 		String base64ProfilePicture = Base64.getEncoder().encodeToString(profilePicture);
 		model.addAttribute("base64ProfilePicture", base64ProfilePicture);
+        List<FriendRequest> friendRequests = user.getReceivedFriendRequests();
+		int count = friendRequests.size();
+		model.addAttribute("requestCount", count);
         return "chessboard.jsp";
     }
 

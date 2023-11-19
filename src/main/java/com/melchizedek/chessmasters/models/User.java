@@ -15,6 +15,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -53,6 +54,17 @@ public class User {
         joinColumns = @JoinColumn(name = "user_id"), 
         inverseJoinColumns = @JoinColumn(name = "role_id"))
     private List<Role> roles;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "friendships",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "friend_id")
+    )
+    private List<User> friends;
+    @OneToMany(mappedBy="sender", fetch = FetchType.LAZY)
+    private List<FriendRequest> sentFriendRequests;
+    @OneToMany(mappedBy="recipient", fetch = FetchType.LAZY)
+    private List<FriendRequest> receivedFriendRequests;
 
     public User() {}
 
@@ -160,6 +172,30 @@ public class User {
         this.roles = roles;
     }
     
+    public List<User> getFriends() {
+        return friends;
+    }
+
+    public void setFriends(List<User> friends) {
+        this.friends = friends;
+    }
+
+    public List<FriendRequest> getSentFriendRequests() {
+        return sentFriendRequests;
+    }
+
+    public void setSentFriendRequests(List<FriendRequest> sentFriendRequests) {
+        this.sentFriendRequests = sentFriendRequests;
+    }
+
+    public List<FriendRequest> getReceivedFriendRequests() {
+        return receivedFriendRequests;
+    }
+
+    public void setReceivedFriendRequests(List<FriendRequest> receivedFriendRequests) {
+        this.receivedFriendRequests = receivedFriendRequests;
+    }
+
     @PrePersist
     protected void onCreate(){
         this.createdAt = new Date();

@@ -4,18 +4,23 @@ import java.io.IOException;
 import java.security.Principal;
 import java.util.Base64;
 import java.util.Date;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.melchizedek.chessmasters.models.FriendRequest;
 import com.melchizedek.chessmasters.models.User;
 import com.melchizedek.chessmasters.services.UserService;
 import com.melchizedek.chessmasters.validator.UserValidator;
@@ -103,6 +108,9 @@ public class UserController {
 		byte[] profilePicture = user.getProfilePicture();
 		String base64ProfilePicture = Base64.getEncoder().encodeToString(profilePicture);
 		model.addAttribute("base64ProfilePicture", base64ProfilePicture);
+		List<FriendRequest> friendRequests = user.getReceivedFriendRequests();
+		int count = friendRequests.size();
+		model.addAttribute("requestCount", count);
 		
 		if(user!=null) {
 			user.setLastLogin(new Date());
@@ -172,6 +180,102 @@ public class UserController {
 		}
 		userService.updateUser(currentUser);
 		return "redirect:/home";
+	}
+
+	@RequestMapping("/friends")
+	public String friends(@ModelAttribute("friendRequest") FriendRequest friendRequest, Principal principal, Model model, RedirectAttributes redirectAttributes) {
+		if(principal==null) {
+			return "redirect:/login";
+		}
+		User user = userService.findByEmail(principal.getName());
+		model.addAttribute("user", user);
+		byte[] profilePicture = user.getProfilePicture();
+		String base64ProfilePicture = Base64.getEncoder().encodeToString(profilePicture);
+		model.addAttribute("base64ProfilePicture", base64ProfilePicture);
+		List<User> friends = user.getFriends();
+		model.addAttribute("friends", friends);
+		List<FriendRequest> friendRequests = user.getReceivedFriendRequests();
+		model.addAttribute("friendRequests", friendRequests);
+		int count = friendRequests.size();
+		model.addAttribute("requestCount", count);
+		List<User> searchResults = (List<User>) redirectAttributes.getFlashAttributes().get("searchResults");
+		Boolean noResults = (Boolean) redirectAttributes.getFlashAttributes().get("noResults");
+		if (searchResults != null) {
+			model.addAttribute("searchResults", searchResults);
+		} else {
+			model.addAttribute("noResultsValue", noResults);
+		}
+		return "friendsPage.jsp";
+	}
+
+	@PostMapping("/friends/request/{friendId}")
+	public String sendFriendRequest(@Valid @ModelAttribute("friendRequest") FriendRequest friendRequest, BindingResult result, Principal principal, Model model, @PathVariable("friendId") Long friendId) {
+		if (principal == null) {
+			return "redirect:/login";
+		}
+		userService.sendFriendRequest(friendRequest);
+		return "redirect:/friends";
+	}
+
+	@PutMapping("/friends/accept/{requestId}/{friendId}")
+	public String addFriend(Principal principal, @PathVariable("requestId") Long requestId, @PathVariable("friendId") Long friendId, Model model) {
+		if(principal==null) {
+			return "redirect:/login";
+		}
+		User user = userService.findByEmail(principal.getName());
+		User friend = userService.findById(friendId);
+		FriendRequest request = userService.findFriendRequestById(requestId);
+		userService.addFriend(user, friend, request);
+		return "redirect:/friends";
+	}
+
+	@PutMapping("/friends/decline/{requestId}")
+	public String removeFriendRequest(Principal principal, @PathVariable("requestId") Long requestId, Model model) {
+		if(principal==null) {
+			return "redirect:/login";
+		}
+		FriendRequest request = userService.findFriendRequestById(requestId);
+		userService.removeFriendRequest(request);
+		return "redirect:/friends";
+	}
+
+	@PutMapping("/friends/remove/{friendId}")
+	public String removeFriend(Principal principal, @PathVariable("friendId") Long friendId, Model model) {
+		if(principal==null) {
+			return "redirect:/login";
+		}
+		User user = userService.findByEmail(principal.getName());
+		User friend = userService.findById(friendId);
+		userService.removeFriend(user, friend);
+		return "redirect:/friends";
+	}
+
+	@GetMapping("/friends/search")
+	public String searchUsers(@RequestParam("search") String searchQuery, Principal principal, Model model, RedirectAttributes redirectAttributes) {
+		if(principal==null) {
+			return "redirect:/login";
+		}
+		User user = userService.findByEmail(principal.getName());
+		if(searchQuery == null || searchQuery.trim().isEmpty()) {
+			model.addAttribute("user", user);
+			byte[] profilePicture = user.getProfilePicture();
+			String base64ProfilePicture = Base64.getEncoder().encodeToString(profilePicture);
+			model.addAttribute("base64ProfilePicture", base64ProfilePicture);
+			List<User> friends = user.getFriends();
+			model.addAttribute("friends", friends);
+			List<FriendRequest> friendRequests = user.getReceivedFriendRequests();
+			model.addAttribute("friendRequests", friendRequests);
+			int count = friendRequests.size();
+			model.addAttribute("requestCount", count);
+			model.addAttribute("searchError", "Search query cannot be empty");
+			return "friendsPage.jsp";
+		}
+		List<User> users = userService.searchUsers(searchQuery, user);
+		redirectAttributes.addFlashAttribute("searchResults", users);
+		if (users.size() == 0) {
+			redirectAttributes.addFlashAttribute("noResults", true);
+		}
+		return "redirect:/friends";
 	}
 
     // @RequestMapping("/admin")
